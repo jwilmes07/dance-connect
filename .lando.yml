@@ -1,0 +1,55 @@
+name: dance-connect
+recipe: drupal10
+config:
+  php: '8.1'
+  webroot: docroot
+  composer_version: 2
+services:
+  appserver:
+    platform: linux/x86_64
+    xdebug: true
+    config:
+      php: .lando.php.ini
+    overrides:
+      environment:
+        XDEBUG_MODE:
+        LANDO_HOST_IP: "172.17.0.1"
+      extra_hosts:
+        - ${LANDO_HOST_NAME_DEV:-host}:${LANDO_HOST_GATEWAY_DEV:-host-gateway}
+    build:
+      - composer install
+    build_as_root:
+      - a2enmod headers
+      - service apache2 reload
+    extras:
+      - apt-get update -y
+      - apt-get install rename -y
+  database:
+    creds:
+      user: user
+      password: user
+      database: default
+  node:
+    type: node
+    build:
+      - npm install
+      - npm install -G gulp
+tooling:
+  node:
+    service: node
+  npm:
+    service: node
+    dir: /app/source
+  gulp:
+    service: node
+    dir: /app/source
+  xdebug-on:
+    service: appserver
+    description: Enable xdebug for Apache.
+    cmd: docker-php-ext-enable xdebug && /etc/init.d/apache2 reload && echo "Enabling xdebug"
+    user: root
+  xdebug-off:
+    service: appserver
+    description: Disable xdebug for Apache.
+    cmd: rm /usr/local/etc/php/conf.d/docker-php-ext-xdebug.ini && /etc/init.d/apache2 reload && echo "Disabling xdebug"
+    user: root
